@@ -4,3 +4,8 @@ This need to be done first. This creates the nice csv with all data together. An
 
 ## R script for multimodal decomposition (co-created with Mathieu Bosq during his PhD, after we decided to stop using the Fityk software used in previous works during Luca Sitzia's PhD)
 Uses the Distribution_for_decomposition_script.csv to make a list for all samples in the batch, and then you can play woth the multimodal decomposition, which is not easy!
+Please if you find ways to unmx these distributions better than I did with this mixdist package, do not hesitate to do so and tell me!
+Sometimes it works nicely, and sometimes, for some sediments or even for some samples in a batch of measurements, you spend a lot of time finding the right initial parameters so that it even try to fit... 
+
+## Panga ya Saidi burial sediment analysis
+The raw data in the folder are the one used for the analysis of Panga ya Saidi burial (Martinón-Torreset al. 2021. Earliest known human burial in Africa. Nature https://doi.org/10.1038/s41586-021-03457-8). These files are coming directly from our laser granulometer with the parameters explained in the paper andor in Sitzia et al. 2017 (10.1016/j.quascirev.2017.06.029,especially in Supp. Mat. 1). The ternary plot produced with this version is rotated since I modified the script after the publication to make it more like the standard ternary diagrams in sedimentology.
