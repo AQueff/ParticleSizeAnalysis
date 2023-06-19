@@ -1,4 +1,5 @@
-setwd("C:/Users/a.queffelec/Documents/GitHub/ParticleSizeAnalysis") #place where the Distribution_for_decomposition_script.csv is located, which is a transposed
+
+# Load the specific libraries needed for this script
 library(mixdist)
 
 # With gaussian distributions for cave deposits or fluviatil sediment ----------------------
