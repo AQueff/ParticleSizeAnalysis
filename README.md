@@ -1,7 +1,7 @@
 # ParticleSizeAnalysis
 
 ## Panga ya Saidi burial sediment analysis replication
-The raw data in the folder are the one used for the analysis of Panga ya Saidi burial (Martinón-Torres et al. 2021. Earliest known human burial in Africa. Nature https://doi.org/10.1038/s41586-021-03457-8). These files are coming directly from our laser granulometer with the parameters explained in the paper andor in Sitzia et al. 2017 (10.1016/j.quascirev.2017.06.029,especially in Supp. Mat. 1). The ternary plot produced with this version is rotated since I modified the script after the publication to make it more like the standard ternary diagrams in sedimentology.
+The raw data in the folder are the one used for the analysis of Panga ya Saidi burial (Martinón-Torres et al. 2021. Earliest known human burial in Africa. Nature https://doi.org/10.1038/s41586-021-03457-8). These files are coming directly from our laser granulometer with the parameters explained in the paper and in Sitzia et al. 2017 (10.1016/j.quascirev.2017.06.029,especially in Supp. Mat. 1). The ternary plot produced with this version is rotated compared to the one in the NAture Extended Data since I modified the script after the publication to make it more like the standard ternary diagrams in sedimentology.
 
 ## R scripts for transforming the raw data from our machine into a nice table, graphs and ternary plots. 
 This need to be done first for replication from raw data, but the end of the script can be used to produce figures and so on if you create an equivalent csv file with your own raw data results. 
