@@ -1,8 +1,8 @@
-setwd("C:/Users/XXX/XXX/XXX") #place where all the raw csv from machine are located
-output.file.name = "Granulometric_results.csv"
-files <- list.files(pattern = "\\.csv$")
 
-### Ouvrir toutes les library n?cessaires
+output.file.name = "Granulometric_results.csv"
+files <- list.files(path = "./Raw data from machine",pattern = "\\.csv$")
+
+### Necessary libraries
 library(dplyr)
 library(grid)
 library(ggplot2)
@@ -14,33 +14,32 @@ library(writexl)
 library(tidyr)
 
 
-#### SUPPRIMER LA FIN DES NOMS DE FICHIER DES CSV####
+#### Delete the end of csv files from the machine if necessary####
 FinNomCsv = "-Cup000-000"
 
-### Cr?ation des dataframes qui ont besoin d'une existence hors de la boucle
+### Creation of dataframes which need to be created out of loops
 merged.df =data.frame()
-merged.names = c("Echantillon","Units")
+merged.names = c("Sample","Units")
 new.df = data.frame()
 
-### Param?tres & seuils par chercheur (ajout FS, 2022-03-08)
-seuil_argile <- 7
-seuil_lim_fins <- 26
-seuil_lim_gros <- 50
-seuil_sablef <- 500
+### Limits for different classes, different for different geologists (added by Fréderic Santos 2022-03-08)
+clay_threshold <- 7
+finesilt_threshold <- 26
+coarsesilt_threshold <- 50
+finesand_threshold <- 500
 
-### Boucle de cr?ation du csv avec les bonnes colonnes, pas de texte dans les colonnes, et transpos?. 
-### Comme files est une liste on peut faire cr?er un file pour chaque objet de la liste files
+### Loop for creating the nice .csv out of the multiple bad csv from the machine
 
 for(file in files)
   {
-	## Vider le new.df ? chaque d?but de boucle
+	## Empty the new.df for each new start of the loop
 	new.df = data.frame()	
 	
-	## cr?er un dataframe ? partir du premier csv. On l'oblige ? avoir 5 colonnes car sinon il regarde les 6 premi?res lignes pour savoir combien de colonnes utiliser
-	df = read.csv(file,header=FALSE, sep="\t",dec=".",col.names= paste0("V", seq_len(5)))
+	## Creating the dataframe with the right number of columns (5)
+	df = read.csv(file = paste0("./Raw data from machine/",file),header=FALSE, sep="\t",dec=".",col.names= paste0("V", seq_len(5)))
 	df = as.matrix(df)
 	
-	## dia25 et dia75 sont deux vecteurs qui sont des bouts de la ligne 9, en la coupant par des stringsplit et ? la fin on rajoute une colonne vide pour l'obliger ? en avoir 3
+	## Quartile 1 and quartile 3 (diameter for respectively 25% and 75% of cumulated distribution) are prepared here from line 9 from the machine's csv.
 	dia25 = strsplit(as.character(df[9,2]),"Microns")[[1]]
 	dia25  = strsplit(dia25,"-")[[1]]	
 	dia25[1]= strsplit(dia25[1],")")
@@ -51,30 +50,30 @@ for(file in files)
 	dia75[1]= strsplit(dia75[1],")")
 	dia75=c("D75",paste0(dia75[[2]][1],"Microns"),"")
 	
-	## cat1, cat2, cat3 et cat4 sont des vecteurs qui sont des bouts de la ligne 15, cat5 est un nouveau vecteur pour avoir directement la proportion d'argiles.
+	## Creation of 5 vectors for the t un nouveau vecteur pour avoir directement la proportionof Clay.
 	cat1 = strsplit(as.character(df[15,2]),") ")[[1]]
-	cat1[1] = sprintf("%% Sables grossiers (2000-%gµm)", seuil_sablef)
+	cat1[1] = sprintf("%% Coarse sand (2000-%gµm)", finesand_threshold)
 	cat1=c(cat1,"")
 
 	cat2 = strsplit(as.character(df[15,3]),") ")[[1]]
-	cat2[1] = sprintf("%% Sables grossiers (%g-%gµm)", seuil_sablef, seuil_lim_gros)
+	cat2[1] = sprintf("%% Fine sand (%g-%gµm)", finesand_threshold, coarsesilt_threshold)
 	cat2=c(cat2,"")
 
 	cat3 = strsplit(as.character(df[15,4]),") ")[[1]]
-	cat3[1] = sprintf("%% Limons grossiers (%g-%gµm)", seuil_lim_gros, seuil_lim_fins)
+	cat3[1] = sprintf("%% Coarse silt (%g-%gµm)", coarsesilt_threshold, finesilt_threshold)
 	cat3=c(cat3,"")
 
 	cat4 = strsplit(as.character(df[15,5]),") ")[[1]]
-	cat4[1] = sprintf("%% Limons fins (%g-%gµm)", seuil_lim_fins, seuil_argile)
+	cat4[1] = sprintf("%% Fine silt (%g-%gµm)", finesilt_threshold, clay_threshold)
 	cat4=c(cat4,"")
 	
   cat5_val = round((100 - sum(as.numeric(c(abs(as.numeric(cat1[2])),abs(as.numeric(cat2[2])),abs(as.numeric(cat3[2])),abs(as.numeric(cat4[2])))))),2)
-  cat5_nam = sprintf("%% Argiles (<%gµm)", seuil_argile)
+  cat5_nam = sprintf("%% Clay (<%gµm)", clay_threshold)
   cat5=c(cat5_nam, cat5_val, "")
 	
 	df[38,1] = "Diameter (µm)"
 	df[38,2] = "Frequency (%)"
-	df[38,3] = "Passant (%)"
+	df[38,3] = "Passing (%)"
 	## ici on fait un new.df en rbind, en prenant les lignes que l'on souhaite en piquant 
 	## dans le df initial et en prenant les nouveaux vecteurs qu'on a cr?? pour les mettre o? l'on veut et en ne gardant 
 	## que les 3 premi?res colonnes (les autres sont maintenant vides car on a vir? la ligne 15
@@ -91,7 +90,7 @@ for(file in files)
 	unit=rep("",nrow(new.df))
 	# troisi?me ?tape : utiliser les positions connues en premi?re ?tape pour mettre au bon endroit les unit?s
 	unit[microns.index]="microns"
-  unit[13]="Diam?tre (phi)"
+  unit[13]="Diameter (phi)"
   unit[14:106]=round(((-log(0.001*as.numeric(new.df[14:106])))/log(2)),2)
   unit[108:200]=round(((-log(0.001*as.numeric(new.df[108:200])))/log(2)),2)
 	# quatri?me ?tape : faire un rechercher/remplacer par rien dans la colonne 2
@@ -115,128 +114,124 @@ for(file in files)
 }
 
 #on transpose la dataframe
-resultats = t(merged.df)
+results = t(merged.df)
 
 ### Construction auto du fichier "newdata.csv"
-col_passant <- which(resultats == "Passant (%)", arr.ind = TRUE)[1,2]
-temp <- resultats[, (col_passant+1):ncol(resultats)] %>%
+col_passing <- which(results == "Passing (%)", arr.ind = TRUE)[1,2]
+temp <- results[, (col_passing+1):ncol(results)] %>%
   as.data.frame() %>%
   mutate_all(as.numeric)
-diametres <- temp[1, ]
-ind_high_argile <- Position(function(x) x >= seuil_argile, diametres)
-ind_high_lf <- Position(function(x) x >= seuil_lim_fins, diametres)
-ind_high_lg <- Position(function(x) x >= seuil_lim_gros, diametres)
-ind_high_sablef <- Position(function(x) x >= seuil_sablef, diametres)
-coef_argile <- (seuil_argile - temp[1, ind_high_argile-1]) / (temp[1, ind_high_argile] - temp[1, ind_high_argile-1])
-coef_lf <- (seuil_lim_fins - temp[1, ind_high_lf-1]) / (temp[1, ind_high_lf] - temp[1, ind_high_lf-1])
-coef_lg <- (seuil_lim_gros - temp[1, ind_high_lg-1]) / (temp[1, ind_high_lg] - temp[1, ind_high_lg-1])
-coef_sablef <- (seuil_sablef - temp[1, ind_high_sablef-1]) / (temp[1, ind_high_sablef] - temp[1, ind_high_sablef-1])
+diameters <- temp[1, ]
+ind_high_clay <- Position(function(x) x >= clay_threshold, diameters)
+ind_high_finesilt <- Position(function(x) x >= finesilt_threshold, diameters)
+ind_high_coarsesilt <- Position(function(x) x >= coarsesilt_threshold, diameters)
+ind_high_finesand <- Position(function(x) x >= finesand_threshold, diameters)
+coef_clay <- (clay_threshold - temp[1, ind_high_clay-1]) / (temp[1, ind_high_clay] - temp[1, ind_high_clay-1])
+coef_finesilt <- (finesilt_threshold - temp[1, ind_high_finesilt-1]) / (temp[1, ind_high_finesilt] - temp[1, ind_high_finesilt-1])
+coef_coarsesilt <- (coarsesilt_threshold - temp[1, ind_high_coarsesilt-1]) / (temp[1, ind_high_coarsesilt] - temp[1, ind_high_coarsesilt-1])
+coef_finesand <- (finesand_threshold - temp[1, ind_high_finesand-1]) / (temp[1, ind_high_finesand] - temp[1, ind_high_finesand-1])
 
 newdata <- data.frame(
-  low_argile = temp[-c(1:2), ind_high_argile-1],
-  high_argile = temp[-c(1:2), ind_high_argile],
-  low_lf = temp[-c(1:2), ind_high_lf-1],
-  high_lf = temp[-c(1:2), ind_high_lf],
-  low_lg = temp[-c(1:2), ind_high_lg-1],
-  high_lg = temp[-c(1:2), ind_high_lg],
-  low_sablef = temp[-c(1:2), ind_high_sablef-1],
-  high_sablef = temp[-c(1:2), ind_high_sablef]
+  low_clay = temp[-c(1:2), ind_high_clay-1],
+  high_clay = temp[-c(1:2), ind_high_clay],
+  low_finesilt = temp[-c(1:2), ind_high_finesilt-1],
+  high_finesilt = temp[-c(1:2), ind_high_finesilt],
+  low_coarsesilt = temp[-c(1:2), ind_high_coarsesilt-1],
+  high_coarsesilt = temp[-c(1:2), ind_high_coarsesilt],
+  low_finesand = temp[-c(1:2), ind_high_finesand-1],
+  high_finesand = temp[-c(1:2), ind_high_finesand]
 ) %>% mutate(
-  passant_arg = low_argile + coef_argile * (high_argile - low_argile),
-  passant_limonsf = low_lf + coef_lf * (high_lf - low_lf),
-  passant_limonsg = low_lg + coef_lg * (high_lg - low_lg),
-  passant_sablesf = low_sablef + coef_sablef * (high_sablef - low_sablef),
-  pourcent_sablesf_sablesg = 100-passant_sablesf,
-  pourcent_limonsg_sablesf = passant_sablesf - passant_limonsg,
-  pourcent_limonsf_limonsg = passant_limonsg - passant_limonsf,
-  pourcent_arg_limonsf = passant_limonsf - passant_arg,
-  pourcent_arg = passant_arg
+  passing_clay = low_clay + coef_clay * (high_clay - low_clay),
+  passing_finesilt = low_finesilt + coef_finesilt * (high_finesilt - low_finesilt),
+  passing_coarsesilt = low_coarsesilt + coef_coarsesilt * (high_coarsesilt - low_coarsesilt),
+  passing_finesand = low_finesand + coef_finesand * (high_finesand - low_finesand),
+  pourcent_finesand_coarsesand = 100-passing_finesand,
+  pourcent_coarsesilt_finesand = passing_finesand - passing_coarsesilt,
+  pourcent_finesilt_coarsesilt = passing_coarsesilt - passing_finesilt,
+  pourcent_clay_finesilt = passing_finesilt - passing_clay,
+  pourcent_clay = passing_clay
 )
 
-#?criture du newdata.csv si besoin de r?cup?rer les passants des valeurs particuli?res
-write.csv2(newdata, "newdata.csv")
 
-#Importation newdata dans fichier resultat
-resultats.df = as.data.frame(resultats)
-resultats.df[3:nrow(resultats.df),6:10]= newdata[,13:17]
-file.remove("newdata.csv")
+# Import newdata in the main result file
+results.df = as.data.frame(results)
+results.df[3:nrow(results.df),6:10]= newdata[,13:17]
 
-#Cr?er le nouveau csv en prenant comme nom de fichier ce qui est rentr? tout en haut. J'utilise write.table car write.csv est prot?g? 
-# quant ? la modification de col.names et si je mets pas col.names=FALSE, j'ai une ligne en plus avec dia25, dia75 etc.
-write.table(resultats.df,output.file.name, col.names=FALSE, sep=";")
+# Create the final csv (with write.table and not write.csv because I need the col.names = F possibility).
+write.table(results.df,output.file.name, col.names=FALSE, sep=";")
 
 ########################################
 ###### Creation ternary diagram    #####
 ########################################
 
-Echantillons=row.names(resultats.df[3:nrow(resultats.df),])
-Sables = c(as.numeric(resultats.df[3:nrow(resultats.df),6])+as.numeric(resultats.df[3:nrow(resultats.df),7]))
-Limons = c(as.numeric(resultats.df[(3:nrow(resultats.df)),8])+as.numeric(resultats.df[3:nrow(resultats.df),9]))
-Argiles = c(as.numeric(resultats.df[(3:nrow(resultats.df)),10]))
-CLAY = Argiles
-SILT = Limons
-SAND = Sables
+Samples=row.names(results.df[3:nrow(results.df),])
+Sand = c(as.numeric(results.df[3:nrow(results.df),6])+as.numeric(results.df[3:nrow(results.df),7]))
+Silt = c(as.numeric(results.df[(3:nrow(results.df)),8])+as.numeric(results.df[3:nrow(results.df),9]))
+Clay = c(as.numeric(results.df[(3:nrow(results.df)),10]))
+CLAY = Clay
+SILT = Silt
+SAND = Sand
 
 pdf("Ternary with labels.pdf", height=10,width=10) 
-Table_diag_tern = as.data.frame(cbind(Sables, Limons, Argiles))
-row.names(Table_diag_tern) = Echantillons
-diag_tern = ggtern() + geom_point(data=Table_diag_tern, aes(Sables,Argiles,Limons, color=Echantillons)) + geom_text(data=Table_diag_tern, size=3, hjust = 0.5, vjust=-0.5 , aes(Sables,Argiles,Limons, label=Echantillons))
+Table_diag_tern = as.data.frame(cbind(Sand, Silt, Clay))
+row.names(Table_diag_tern) = Samples
+diag_tern = ggtern() + geom_point(data=Table_diag_tern, aes(Sand,Clay,Silt, color=Samples)) + geom_text(data=Table_diag_tern, size=3, hjust = 0.5, vjust=-0.5 , aes(Sand,Clay,Silt, label=Samples))
 diag_tern
 dev.off()
 
 pdf("Ternary without labels.pdf", height=10,width=10) 
-Table_diag_tern = as.data.frame(cbind(Sables, Limons, Argiles))
-row.names(Table_diag_tern) = Echantillons
-diag_tern = ggtern() + geom_point(data=Table_diag_tern, aes(Sables,Argiles,Limons, color=Echantillons)) 
+Table_diag_tern = as.data.frame(cbind(Sand, Silt, Clay))
+row.names(Table_diag_tern) = Samples
+diag_tern = ggtern() + geom_point(data=Table_diag_tern, aes(Sand,Clay,Silt, color=Samples)) 
 diag_tern
 dev.off()
 
 ######################################################
-###########   Triangles Textures #####################
+###########   Texture diagram #####################
 ######################################################
 
 #### MODIFIER TEMPLATE####
 ##   Fetch the definition of the HYPRES texture triangle
 usda <- soiltexture::TT.get( "USDA.TT")
 ##   Inspect the object to find the names of the polygons:
-#usda
-new.labels <- c( "Cl" = "Argile", "SiCl" = "Argile limoneuse", "SaCl" = "Argile sableuse", 
-                 "ClLo" = "Limon argileux", "SiClLo" = "Limon argileux fin", "SaClLo" = "Limon argilo-sableux", "Lo" = "Limon",
-                 "SiLo" = "Limon fin", "SaLo" = "Limon sableux","Si" = "Limon tres fin","LoSa" = "Sable limoneux", "Sa" = "Sable")
+usda
+new.labels <- c( "Cl" = "Clay", "SiCl" = "Silty clay", "SaCl" = "Sandy clay", 
+                 "ClLo" = "Clayey silt", "SiClLo" = "clayey fine silt", "SaClLo" = "Sandy-clayey silt", "Lo" = "Silt",
+                 "SiLo" = "Fine silt", "SaLo" = "Sandy silt","Si" = "Very fine silt","LoSa" = "Silty sand", "Sa" = "Sand")
 ##   fetch the old labels (for later control)
 old.labels <- names( usda[[ "tt.polygons" ]] ) 
 ##   Now replace the old labels by the new labels
-names( usda[[ "tt.polygons" ]] ) <- new.labels[ 
-  names( usda[[ "tt.polygons" ]] ) ]
+names(usda[["tt.polygons"]]) <- new.labels[ 
+  names(usda[["tt.polygons"]])]
 ##   We also change the main title of the triangle
 #usda[[ "main" ]] <- "My texture triangle"
 #   In the code below, the order in which you give the labels 
 #   in principle does not matter, as long as each old label 
 #  obtain a new label
 ##   Now control the old names and the new names:
-#data.frame( "old" = old.labels, 
-#            "new" = names( usda[[ "tt.polygons" ]] ) )
+data.frame( "old" = old.labels, 
+            "new" = names( usda[[ "tt.polygons" ]] ) )
 ##Save your new template
-soiltexture::TT.set( "USDA_fr.TT" = usda )
+soiltexture::TT.set("USDA.TT" = usda)
 ##Check on your new template
-#soiltexture::TT.plot( class.sys = "USDA_fr.TT" )
+soiltexture::TT.plot( class.sys = "USDA.TT" )
 
 
 ############ TRACER LE TERNAIRE #########
 Table_TT_plot = cbind(CLAY, SILT, SAND)
-row.names(Table_TT_plot) = Echantillons
-pdf("Diagramme_ternaire-texture.pdf", height=10,width=10) 
-geo = TT.plot(class.sys   = "USDA_fr.TT",
-        main = "Textural diagram without labels",
+row.names(Table_TT_plot) = Samples
+pdf("Texture_diagram_without_labels.pdf", height=10,width=10) 
+geo = TT.plot(class.sys   = "USDA.TT",
+        main = "Texture diagram",
         #z.name = , #S'il y a une 4? colonne dans le data.frame pour une autre variable, on peut mettre ce nom.
         grid.show = FALSE, #montrer ou pas la grille tous les 10% (F : false)
         frame.bg.col = "white",
         #class.lab.show = "full",
         arrows.show = T,
         css.lab = c(
-          sprintf("%% Argiles (0 - %g µm)", seuil_argile),
-          sprintf("%% Limons (%g - %g µm)", seuil_argile, seuil_lim_gros),
-          sprintf("%% Sables (%g - 2000 µm)", seuil_lim_gros)
+          sprintf("%% Clay (0 - %g µm)", clay_threshold),
+          sprintf("%% Silt (%g - %g µm)", clay_threshold, coarsesilt_threshold),
+          sprintf("%% Sand (%g - 2000 µm)", coarsesilt_threshold)
         ),
         #blr.clock = c(T,T,T), #	Vector of logicals, eventually with NA values. Direction of increasing texture values on the BOTTOM, LEFT and RIGHT axis, respectively. A value of TRUE means that the axis direction is clockwise. A value of FALSE means that the axis direction is counterclockwise. A value of NA means that the axis direction is centripetal. Possible combinations are c(T,T,T); c(F,F,F); c(F,T,NA) and c(T,NA,F), for fully clockwise, fully counterclockwise, right centripetal and left centripetal orientations, respectively.
         lang = "fr",
@@ -244,18 +239,18 @@ geo = TT.plot(class.sys   = "USDA_fr.TT",
 TT.points(tri.data=Table_TT_plot, geo=geo, col="red", pch=1, cex = 1)
 dev.off()
 
-pdf("Textural diagram without labels.pdf", height=10,width=10) 
-geo = TT.plot(class.sys   = "USDA_fr.TT",
-              main = "Textural diagram with labels",
+pdf("Texture_diagram_labels.pdf", height=10,width=10) 
+geo = TT.plot(class.sys   = "USDA.TT",
+              main = "Texture diagram",
               #z.name = , #S'il y a une 4? colonne dans le data.frame pour une autre variable, on peut mettre ce nom.
               grid.show = FALSE, #montrer ou pas la grille tous les 10% (F : false)
               frame.bg.col = "white",
               #class.lab.show = "full",
               arrows.show = T,
               css.lab = c(
-                sprintf("%% Argiles (0 - %g µm)", seuil_argile),
-                sprintf("%% Limons (%g - %g µm)", seuil_argile, seuil_lim_gros),
-                sprintf("%% Sables (%g - 2000 µm)", seuil_lim_gros)
+                sprintf("%% Clay (0 - %g µm)", clay_threshold),
+                sprintf("%% Silt (%g - %g µm)", clay_threshold, coarsesilt_threshold),
+                sprintf("%% Sand (%g - 2000 µm)", coarsesilt_threshold)
               ),
               #blr.clock = c(T,T,T), #	Vector of logicals, eventually with NA values. Direction of increasing texture values on the BOTTOM, LEFT and RIGHT axis, respectively. A value of TRUE means that the axis direction is clockwise. A value of FALSE means that the axis direction is counterclockwise. A value of NA means that the axis direction is centripetal. Possible combinations are c(T,T,T); c(F,F,F); c(F,T,NA) and c(T,NA,F), for fully clockwise, fully counterclockwise, right centripetal and left centripetal orientations, respectively.
               lang = "fr",
@@ -264,24 +259,7 @@ TT.points(tri.data=Table_TT_plot, geo=geo, col="red", pch=1, cex = 1)
 TT.text(tri.data = Table_TT_plot, geo = geo, labels = row.names(Table_TT_plot), cex=0.7, font = 2, col = "blue")
 dev.off()
 
-pdf("Textural diagram with labels.pdf", height=10,width=10) 
-geo = TT.plot(class.sys   = "USDA_fr.TT",
-              main = "Diagramme textural avec noms",
-              #z.name = , #S'il y a une 4? colonne dans le data.frame pour une autre variable, on peut mettre ce nom.
-              grid.show = FALSE, #montrer ou pas la grille tous les 10% (F : false)
-              frame.bg.col = "white",
-              #class.lab.show = "full",
-              arrows.show = T,
-              css.lab = c(
-                sprintf("%% Argiles (0 - %g µm)", seuil_argile),
-                sprintf("%% Limons (%g - %g µm)", seuil_argile, seuil_lim_gros),
-                sprintf("%% Sables (%g - 2000 µm)", seuil_lim_gros)
-              ),
-              #blr.clock = c(T,T,T), #	Vector of logicals, eventually with NA values. Direction of increasing texture values on the BOTTOM, LEFT and RIGHT axis, respectively. A value of TRUE means that the axis direction is clockwise. A value of FALSE means that the axis direction is counterclockwise. A value of NA means that the axis direction is centripetal. Possible combinations are c(T,T,T); c(F,F,F); c(F,T,NA) and c(T,NA,F), for fully clockwise, fully counterclockwise, right centripetal and left centripetal orientations, respectively.
-              lang = "fr",
-              cex.lab = 0.7)
-TT.points(tri.data=Table_TT_plot, geo=geo, col="red", pch=1, cex = 1)
-dev.off()
+
 
 ########################################################################################################
 ###### Using category-specific colours or symbols when plotting points on the texture triangle  ########
@@ -359,7 +337,7 @@ for(file in files)
   dia75[1] =paste0("Diam?tre pour ",(dia75[[1]][1]),"%")
   dia75=c("D75",paste0(dia75[[2]][1],"Microns"),"")
   
-  ## cat1, cat2, cat3 et cat4 sont des vecteurs qui sont des bouts de la ligne 15, cat5 est un nouveau vecteur pour avoir directement la proportion d'argiles.
+  ## cat1, cat2, cat3 et cat4 sont des vecteurs qui sont des bouts de la ligne 15, cat5 est un nouveau vecteur pour avoir directement la proportion d'Clay.
   cat1 = strsplit(as.character(df[15,2]),")")[[1]]
   cat1[1] = paste0(cat1[1],")")
   cat1=c(cat1,"")
@@ -377,7 +355,7 @@ for(file in files)
   cat4=c(cat4,"")
   
   cat5 = round((100 - sum(as.numeric(c(abs(as.numeric(cat1[2])),abs(as.numeric(cat2[2])),abs(as.numeric(cat3[2])),abs(as.numeric(cat4[2])))))),2)
-  cat5=c("% Argiles (<7µm)",cat5,"")
+  cat5=c("% Clay (<7µm)",cat5,"")
   
   ## ici on fait un new.df en rbind, en prenant les lignes que l'on souhaite en piquant 
   ## dans le df initial et en prenant les nouveaux vecteurs qu'on a cr?? pour les mettre o? l'on veut et en ne gardant 
@@ -427,18 +405,18 @@ ggsave(filename=paste0(strsplit(file,paste0(FinNomCsv,".csv")),"full.pdf"),fullp
 ####### GRAPHIQUE TOUTES COURBES ENSEMBLE ###############
 
 # Transformation tidy des donn?es de distribution
-Echantillons=row.names(resultats.df[3:nrow(resultats.df),])
+Samples=row.names(resultats.df[3:nrow(resultats.df),])
 X = resultats.df[1,14:106] %>% mutate_all(as.numeric)
 Y_freq = resultats.df[3:nrow(resultats.df),14:106] %>% mutate_all(as.numeric)
 Y_cumul = resultats.df[3:nrow(resultats.df),108:200] %>% mutate_all(as.numeric)
-Data_freq = as.data.frame(cbind(Echantillons,Y_freq))
-Data_cumul = as.data.frame(cbind(Echantillons,Y_cumul))
-row.names(Data_freq) = Echantillons
-row.names(Data_cumul) = Echantillons
-colnames(Data_freq) = c("Echantillon",X)
-colnames(Data_cumul) = c("Echantillon",X)
-Freq_tidy = pivot_longer(Data_freq,cols = 2:94,names_to = "Taille", values_to="Frequence")
-Cumul_tidy = pivot_longer(Data_cumul,cols = 2:94,names_to = "Taille", values_to="Cumule")
+Data_freq = as.data.frame(cbind(Samples,Y_freq))
+Data_cumul = as.data.frame(cbind(Samples,Y_cumul))
+row.names(Data_freq) = Samples
+row.names(Data_cumul) = Samples
+colnames(Data_freq) = c("Sample",X)
+colnames(Data_cumul) = c("Sample",X)
+Freq_tidy = pivot_longer(Data_freq,cols = 2:94,names_to = "Size", values_to="Frequency")
+Cumul_tidy = pivot_longer(Data_cumul,cols = 2:94,names_to = "Size", values_to="Cumulated")
 
 # Graphiques
 pdf("All frequency distributions.pdf", height=10,width=20) 
