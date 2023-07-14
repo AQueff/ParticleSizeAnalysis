@@ -317,7 +317,7 @@ for(file in files)
   new.df = data.frame()	
   
   ## cr?er un dataframe ? partir du premier csv. On l'oblige ? avoir 5 colonnes car sinon il regarde les 6 premi?res lignes pour savoir combien de colonnes utiliser
-  df = read.csv(file,header=FALSE, sep="\t",dec=".",col.names= paste0("V", seq_len(5)))
+  df = read.csv(file = paste0("./Raw data from machine/",file),header=FALSE, sep="\t",dec=".",col.names= paste0("V", seq_len(5)))
   df = as.matrix(df)
   
   ## dia25 et dia75 sont deux vecteurs qui sont des bouts de la ligne 9, en la coupant par des stringsplit et ? la fin on rajoute une colonne vide pour l'obliger ? en avoir 3
