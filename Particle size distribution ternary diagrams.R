@@ -113,7 +113,7 @@ for(file in files)
 	merged.df.xlsx=rbind(merged.names,merged.df)
 }
 
-#on transpose la dataframe
+#transpose the dataframe
 results = t(merged.df)
 
 ### Construction auto du fichier "newdata.csv"
@@ -313,50 +313,48 @@ maxfreq = as.numeric(max(merged.df[25:117, 3:ncol(merged.df)]))
 
 for(file in files)
 {
-  ## Vider le new.df ? chaque d?but de boucle
+  ## Empty the new.df for each new start of the loop
   new.df = data.frame()	
   
-  ## cr?er un dataframe ? partir du premier csv. On l'oblige ? avoir 5 colonnes car sinon il regarde les 6 premi?res lignes pour savoir combien de colonnes utiliser
+  ## Creating the dataframe with the right number of columns (5)
   df = read.csv(file = paste0("./Raw data from machine/",file),header=FALSE, sep="\t",dec=".",col.names= paste0("V", seq_len(5)))
   df = as.matrix(df)
   
-  ## dia25 et dia75 sont deux vecteurs qui sont des bouts de la ligne 9, en la coupant par des stringsplit et ? la fin on rajoute une colonne vide pour l'obliger ? en avoir 3
+  ## Quartile 1 and quartile 3 (diameter for respectively 25% and 75% of cumulated distribution) are prepared here from line 9 from the machine's csv.
   dia25 = strsplit(as.character(df[9,2]),"Microns")[[1]]
   dia25  = strsplit(dia25,"-")[[1]]	
   dia25[1]= strsplit(dia25[1],")")
-  dia25[1]= (dia25[[1]][2])
-  dia25[1]= strsplit(as.character(dia25[1]),".00")
-  dia25[1] =paste0("Diam?tre pour ",(dia25[[1]][1]),"%")
   dia25=c("D25",paste0(dia25[[2]][1],"Microns"),"")
   
   dia75 = strsplit(as.character(df[9,3]),"Microns")[[1]]
   dia75  = strsplit(dia75,"-")[[1]]	
   dia75[1]= strsplit(dia75[1],")")
-  dia75[1]= (dia75[[1]][2])
-  dia75[1]= strsplit(as.character(dia75[1]),".00")
-  dia75[1] =paste0("Diam?tre pour ",(dia75[[1]][1]),"%")
   dia75=c("D75",paste0(dia75[[2]][1],"Microns"),"")
   
-  ## cat1, cat2, cat3 et cat4 sont des vecteurs qui sont des bouts de la ligne 15, cat5 est un nouveau vecteur pour avoir directement la proportion d'Clay.
-  cat1 = strsplit(as.character(df[15,2]),")")[[1]]
-  cat1[1] = paste0(cat1[1],")")
+  ## Creation of 5 vectors for the t un nouveau vecteur pour avoir directement la proportionof Clay.
+  cat1 = strsplit(as.character(df[15,2]),") ")[[1]]
+  cat1[1] = sprintf("%% Coarse sand (2000-%gµm)", finesand_threshold)
   cat1=c(cat1,"")
   
-  cat2 = strsplit(as.character(df[15,3]),")")[[1]]
-  cat2[1] = paste0(cat2[1],")")
+  cat2 = strsplit(as.character(df[15,3]),") ")[[1]]
+  cat2[1] = sprintf("%% Fine sand (%g-%gµm)", finesand_threshold, coarsesilt_threshold)
   cat2=c(cat2,"")
   
-  cat3 = strsplit(as.character(df[15,4]),")")[[1]]
-  cat3[1] = paste0(cat3[1],")")
+  cat3 = strsplit(as.character(df[15,4]),") ")[[1]]
+  cat3[1] = sprintf("%% Coarse silt (%g-%gµm)", coarsesilt_threshold, finesilt_threshold)
   cat3=c(cat3,"")
   
-  cat4 = strsplit(as.character(df[15,5]),")")[[1]]
-  cat4[1] = paste0(cat4[1],")")
+  cat4 = strsplit(as.character(df[15,5]),") ")[[1]]
+  cat4[1] = sprintf("%% Fine silt (%g-%gµm)", finesilt_threshold, clay_threshold)
   cat4=c(cat4,"")
   
-  cat5 = round((100 - sum(as.numeric(c(abs(as.numeric(cat1[2])),abs(as.numeric(cat2[2])),abs(as.numeric(cat3[2])),abs(as.numeric(cat4[2])))))),2)
-  cat5=c("% Clay (<7µm)",cat5,"")
+  cat5_val = round((100 - sum(as.numeric(c(abs(as.numeric(cat1[2])),abs(as.numeric(cat2[2])),abs(as.numeric(cat3[2])),abs(as.numeric(cat4[2])))))),2)
+  cat5_nam = sprintf("%% Clay (<%gµm)", clay_threshold)
+  cat5=c(cat5_nam, cat5_val, "")
   
+  df[38,1] = "Diameter (µm)"
+  df[38,2] = "Frequency (%)"
+  df[38,3] = "Passing (%)"
   ## ici on fait un new.df en rbind, en prenant les lignes que l'on souhaite en piquant 
   ## dans le df initial et en prenant les nouveaux vecteurs qu'on a cr?? pour les mettre o? l'on veut et en ne gardant 
   ## que les 3 premi?res colonnes (les autres sont maintenant vides car on a vir? la ligne 15
@@ -373,7 +371,7 @@ for(file in files)
   unit=rep("",nrow(new.df))
   # troisi?me ?tape : utiliser les positions connues en premi?re ?tape pour mettre au bon endroit les unit?s
   unit[microns.index]="microns"
-  unit[13]="diameter(phi)"
+  unit[13]="Diameter (phi)"
   unit[14:106]=round(((-log(0.001*as.numeric(new.df[14:106])))/log(2)),2)
   unit[108:200]=round(((-log(0.001*as.numeric(new.df[108:200])))/log(2)),2)
   # quatri?me ?tape : faire un rechercher/remplacer par rien dans la colonne 2
@@ -385,18 +383,18 @@ for(file in files)
 distributionmicrons=data.frame(fractionsmicrons=as.numeric(new.df[14:106,1]),pourcents=as.numeric(new.df[14:106,2]),pourcentscumul=as.numeric(new.df[108:200,2]))
 
 # Cr?ation du graphique de distribution , alpha=0.5
-plotmicrons=ggplot(distributionmicrons, aes(fractionsmicrons,pourcents)) + geom_area(fill="grey80") + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous(expand = c(0,0)) + scale_x_log10("Diam?tre des grains (µm)",expand = c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
+plotmicrons=ggplot(distributionmicrons, aes(fractionsmicrons,pourcents)) + geom_area(fill="grey80") + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous("Frequency (%)",expand = c(0,0)) + scale_x_log10("Diameter (µm)",expand = c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
 plotmicrons + geom_vline(xintercept=c(0.01,0.1,1,10,100,1000), colour = "grey50", linetype="longdash")
 ggsave(filename=paste0(strsplit(file,paste0(FinNomCsv,".csv")),".pdf"), width=10, height=5)
 
 # Cr?ation du graphique de courbe cumulative
-plotmicronscumul=ggplot(distributionmicrons, aes(fractionsmicrons,pourcentscumul)) + geom_line() + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous(expand = c(0,0)) + scale_x_log10("Diam?tre des grains (µm)",expand = c(0,0),breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
+plotmicronscumul=ggplot(distributionmicrons, aes(fractionsmicrons,pourcentscumul)) + geom_line() + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous("Cumulated frequency (%)",expand = c(0,0)) + scale_x_log10("Diameter (µm)",expand = c(0,0),breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
 plotmicronscumul + geom_vline(xintercept=c(0.01,0.1,1,10,100,1000), colour = "grey50", linetype="longdash")
 ggsave(filename=paste0(strsplit(file,paste0(FinNomCsv,".csv")),"cumul.pdf"), width=10, height=5)
 
 #cr?ation d'une figure regroupant les deux graphiques frequence et cumul?s
-plotfreq = ggplot(distributionmicrons, aes(fractionsmicrons,pourcents)) + geom_area(fill="grey80") + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous(limits=c(0,maxfreq) , expand = c(0,0)) + scale_x_log10("Diam?tre des grains (µm)",expand=c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
-plotcumul = ggplot(distributionmicrons, aes(fractionsmicrons,pourcentscumul)) + geom_line() + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous(expand = c(0,0)) + scale_x_log10("Diam?tre des grains (µm)",expand=c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
+plotfreq = ggplot(distributionmicrons, aes(fractionsmicrons,pourcents)) + geom_area(fill="grey80") + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous("Frequency (%)",limits=c(0,maxfreq) , expand = c(0,0)) + scale_x_log10("Diameter (µm)",expand=c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
+plotcumul = ggplot(distributionmicrons, aes(fractionsmicrons,pourcentscumul)) + geom_line() + theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + scale_y_continuous("Cumulated frequency (%)",expand = c(0,0)) + scale_x_log10("Diameter (µm)",expand=c(0,0), breaks=c(seq(1e-02,1e-01,by=1e-02),seq(0.1,1,by=0.1),seq(1,10,by=1),seq(10,100,by=10),seq(100,1000,by=100),seq(1000,3000,by=1000)),labels = c(0.01,rep("",9),0.1,rep("",9),1,rep("",9),10,rep("",9),100,rep("",9),1000,rep(""),3000))
 fullplot=arrangeGrob(plotfreq, arrangeGrob(plotcumul), ncol=1)
 ggsave(filename=paste0(strsplit(file,paste0(FinNomCsv,".csv")),"full.pdf"),fullplot, width=10, height=10)
 }
