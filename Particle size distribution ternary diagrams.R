@@ -400,13 +400,13 @@ ggsave(filename=paste0(strsplit(file,paste0(FinNomCsv,".csv")),"full.pdf"),fullp
 }
 
 
-####### GRAPHIQUE TOUTES COURBES ENSEMBLE ###############
+####### GRAPH ALL CURVES TOGETHER ###############
 
-# Transformation tidy des donn?es de distribution
-Samples=row.names(resultats.df[3:nrow(resultats.df),])
-X = resultats.df[1,14:106] %>% mutate_all(as.numeric)
-Y_freq = resultats.df[3:nrow(resultats.df),14:106] %>% mutate_all(as.numeric)
-Y_cumul = resultats.df[3:nrow(resultats.df),108:200] %>% mutate_all(as.numeric)
+# Tidy transformation of data
+Samples=row.names(resultats.df[3:nrow(results.df),])
+X = results.df[1,14:106] %>% mutate_all(as.numeric)
+Y_freq = results.df[3:nrow(results.df),14:106] %>% mutate_all(as.numeric)
+Y_cumul = results.df[3:nrow(results.df),108:200] %>% mutate_all(as.numeric)
 Data_freq = as.data.frame(cbind(Samples,Y_freq))
 Data_cumul = as.data.frame(cbind(Samples,Y_cumul))
 row.names(Data_freq) = Samples
@@ -416,9 +416,9 @@ colnames(Data_cumul) = c("Sample",X)
 Freq_tidy = pivot_longer(Data_freq,cols = 2:94,names_to = "Size", values_to="Frequency")
 Cumul_tidy = pivot_longer(Data_cumul,cols = 2:94,names_to = "Size", values_to="Cumulated")
 
-# Graphiques
+# Graphs
 pdf("All frequency distributions.pdf", height=10,width=20) 
-plot=ggplot(Freq_tidy, aes(as.numeric(Taille),Frequence, color=Echantillon)) + 
+plot=ggplot(Freq_tidy, aes(as.numeric(Size),Frequency, color=Sample)) + 
     geom_line(size = 1) +  
     theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + 
     scale_y_continuous("Frequency (%)", expand = c(0,0)) + 
@@ -428,7 +428,7 @@ plot
 dev.off()
 
 pdf("All cumulated distributions.pdf", height=10,width=20) 
-plot=ggplot(Cumul_tidy, aes(as.numeric(Taille),Cumule, color=Echantillon)) + 
+plot=ggplot(Cumul_tidy, aes(as.numeric(Size),Cumulated, color=Sample)) + 
   geom_line(size=1) +  
   theme(plot.margin = margin (t=10, b= 10, l=10, r= 30)) + 
   scale_y_continuous("% cumulated",expand = c(0,0)) + 
